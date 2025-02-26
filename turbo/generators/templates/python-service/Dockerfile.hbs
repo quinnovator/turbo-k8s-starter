@@ -1,0 +1,62 @@
+# Builder stage
+FROM python:3.11.8-slim AS builder
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on
+
+RUN pip install poetry==1.7.0
+
+# Setup working directory that matches relative path in pyproject.toml
+WORKDIR /workspace/apps/{{kebabCase name}}
+
+# Ensure virtualenv is created in project directory
+RUN poetry config virtualenvs.in-project true
+
+# Create directory structure
+RUN mkdir -p ../../packages/python-health
+
+# Copy local package with correct relative path structure
+COPY packages/python-health/ /workspace/packages/python-health/
+
+# Copy dependency files
+COPY apps/{{kebabCase name}}/pyproject.toml ./pyproject.toml
+COPY apps/{{kebabCase name}}/poetry.lock ./poetry.lock
+
+# Install dependencies (with --no-root flag to avoid the error)
+RUN --mount=type=cache,target=/root/.cache/pip poetry install --only main --no-root
+
+# Runtime stage
+FROM python:3.11.8-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+# Copy virtualenv from builder
+COPY --from=builder /workspace/apps/{{kebabCase name}}/.venv/ /app/.venv/
+
+# Copy application code
+COPY apps/{{kebabCase name}}/main.py /app/
+
+# Create a non-root user
+RUN addgroup --system app && \
+    adduser --system --group app && \
+    chown -R app:app /app
+
+# Switch to non-root user
+USER app
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD ["python", "-c", "import requests; requests.get('http://localhost:{{port}}/health')"]
+
+# Expose API port
+EXPOSE {{port}}
+
+# Run the application using python -m instead of direct uvicorn command
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{{port}}"] 

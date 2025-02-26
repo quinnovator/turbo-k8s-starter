@@ -1,0 +1,41 @@
+package main_test
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	gohealth "github.com/quinnovator/turbo-k8s-starter/packages/go-health"
+)
+
+func TestHealthEndpoint(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+    router := gin.New()
+    router.GET("/health", gohealth.HealthHandler())
+
+    req, _ := http.NewRequest("GET", "/health", nil)
+    w := httptest.NewRecorder()
+    router.ServeHTTP(w, req)
+
+    if w.Code != http.StatusOK {
+        t.Errorf("Expected status 200, got %d", w.Code)
+    }
+
+    var response map[string]interface{}
+    err := json.Unmarshal(w.Body.Bytes(), &response)
+    if err != nil {
+        t.Errorf("Error unmarshaling response: %v", err)
+    }
+
+    if response["status"] != "OK" {
+        t.Errorf("Expected status 'OK', got %v", response["status"])
+    }
+    if _, ok := response["memory_usage"]; !ok {
+        t.Errorf("Expected memory_usage in response")
+    }
+    if _, ok := response["cpu_usage"]; !ok {
+        t.Errorf("Expected cpu_usage in response")
+    }
+}

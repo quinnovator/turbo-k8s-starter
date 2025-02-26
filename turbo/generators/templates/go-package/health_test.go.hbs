@@ -1,0 +1,34 @@
+package {{camelCase name}}_test
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"{{goRepo}}/packages/{{kebabCase name}}"
+)
+
+func TestHealthHandler(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.GET("/health", {{camelCase name}}.HealthHandler())
+
+	req, _ := http.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "OK", resp["status"])
+	_, memOk := resp["memory_usage"]
+	_, cpuOk := resp["cpu_usage"]
+	assert.True(t, memOk)
+	assert.True(t, cpuOk)
+}

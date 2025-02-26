@@ -1,0 +1,14 @@
+import { describe, it, expect } from 'bun:test';
+import app from '../src/index';
+
+describe('Hono API', () => {
+  it('should return status OK from health endpoint', async () => {
+    const req = new Request('http://localhost/health');
+    const res = await app.fetch(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.status).toBe('OK');
+    expect(json.memory_usage).toBeDefined();
+    expect(json.cpu_usage).toBeDefined();
+  });
+});

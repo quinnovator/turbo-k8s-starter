@@ -1,0 +1,12 @@
+{
+  "name": "{{kebabCase name}}",
+  "private": true,
+  "scripts": {
+    "install": "poetry lock --no-update && poetry install",
+    "dev": "poetry run uvicorn main:app --reload --host 0.0.0.0 --port {{port}}",
+    "test": "poetry run pytest",
+    "perf-test": "bun run dev &amp; sleep 2 &amp; bun run perf-test:k6",
+    "perf-test:k6": "k6 run --out json=performance-tests/report/results.json performance-tests/loadtest.js",
+    "docker:build": "docker build -t {{kebabCase name}} -f ./Dockerfile ../../"
+  }
+}

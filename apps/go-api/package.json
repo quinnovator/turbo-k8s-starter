@@ -1,0 +1,11 @@
+{
+	"name": "go-api",
+	"private": true,
+	"scripts": {
+		"install": "go mod tidy",
+		"dev": "go run main.go",
+		"test": "go test ./...",
+		"perf-test": "go run main.go & sleep 2 && k6 run --out json=performance-tests/report/results.json performance-tests/loadtest.js",
+		"docker:build": "docker build -t go-api -f ./Dockerfile ../../"
+	}
+}

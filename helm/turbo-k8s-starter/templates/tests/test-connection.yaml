@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "turbo-k8s-starter.fullname" . }}-test-connection"
+  labels:
+    {{- include "turbo-k8s-starter.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "turbo-k8s-starter.fullname" . }}-go-api:{{ .Values.goApi.service.port }}']
+  restartPolicy: Never

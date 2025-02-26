@@ -1,0 +1,35 @@
+apiVersion: skaffold/v4beta12
+kind: Config
+metadata:
+  name: turbo-k8s-starter
+build:
+  local:
+    useBuildkit: true
+  artifacts:
+    - image: docker.io/quinnovator/turbo-k8s-starter_python-api
+      context: .
+      docker:
+        dockerfile: apps/python-api/Dockerfile
+    - image: docker.io/quinnovator/turbo-k8s-starter_go-api
+      context: .
+      docker:
+        dockerfile: apps/go-api/Dockerfile
+    - image: docker.io/quinnovator/turbo-k8s-starter_hono-api
+      context: .
+      docker:
+        dockerfile: apps/hono-api/Dockerfile
+deploy:
+  helm:
+    releases:
+      - name: turbo-k8s-starter
+        chartPath: helm/turbo-k8s-starter
+        setValueTemplates:
+          pythonApi.image.repository: "{{.IMAGE_REPO_docker_io_quinnovator_turbo_k8s_starter_python_api}}"
+          pythonApi.image.tag: "{{.IMAGE_TAG_docker_io_quinnovator_turbo_k8s_starter_python_api}}"
+          goApi.image.repository: "{{.IMAGE_REPO_docker_io_quinnovator_turbo_k8s_starter_go_api}}"
+          goApi.image.tag: "{{.IMAGE_TAG_docker_io_quinnovator_turbo_k8s_starter_go_api}}"
+          honoApi.image.repository: "{{.IMAGE_REPO_docker_io_quinnovator_turbo_k8s_starter_hono_api}}"
+          honoApi.image.tag: "{{.IMAGE_TAG_docker_io_quinnovator_turbo_k8s_starter_hono_api}}"
+        setValues:
+          imagePullSecrets:
+            - name: docker-pull-secret

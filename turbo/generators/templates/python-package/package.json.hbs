@@ -1,0 +1,13 @@
+{
+  "name": "@repo/{{kebabCase name}}",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "install": "poetry lock --no-update && poetry install",
+    "test": "poetry run pytest"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

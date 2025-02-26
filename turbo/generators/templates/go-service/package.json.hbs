@@ -1,0 +1,11 @@
+{
+  "name": "{{kebabCase name}}",
+  "private": true,
+  "scripts": {
+    "install": "go mod tidy",
+    "dev": "go run main.go",
+    "test": "go test ./...",
+    "perf-test": "go run main.go &amp; sleep 2 &amp; k6 run --out json=performance-tests/report/results.json performance-tests/loadtest.js",
+    "docker:build": "docker build -t {{kebabCase name}} -f ./Dockerfile ../../"
+  }
+}

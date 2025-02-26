@@ -1,0 +1,10 @@
+module {{goRepo}}/apps/{{kebabCase name}}
+
+go 1.22
+
+require (
+	github.com/gin-gonic/gin v1.10.0
+	{{goRepo}}/packages/go-health v0.0.0
+)
+
+replace {{goRepo}}/packages/go-health => ../../packages/go-health

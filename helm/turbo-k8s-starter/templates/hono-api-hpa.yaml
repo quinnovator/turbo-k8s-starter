@@ -1,0 +1,24 @@
+{{- if .Values.honoApi.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "turbo-k8s-starter.fullname" . }}-hono-api
+  labels:
+    {{- include "turbo-k8s-starter.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "turbo-k8s-starter.fullname" . }}-hono-api
+  minReplicas: {{ .Values.honoApi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.honoApi.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.honoApi.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.honoApi.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+{{- end }}

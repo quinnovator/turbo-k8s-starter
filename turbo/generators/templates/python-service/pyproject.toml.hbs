@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "{{kebabCase name}}"
+version = "0.1.0"
+description = "Python FastAPI service for {{kebabCase name}}"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.8"
+uvicorn = "^0.34.0"
+python-health = { path = "../../python-health" }
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.3.4"
+httpx = "^0.28.1"
+locust = "^2.31.6"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

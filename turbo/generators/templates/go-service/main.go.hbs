@@ -1,0 +1,12 @@
+package main
+
+import (
+	"github.com/gin-gonic/gin"
+	gohealth "{{goRepo}}/packages/go-health"
+)
+
+func main() {
+	r := gin.Default()
+	r.GET("/health", gohealth.HealthHandler())
+	r.Run(":{{port}}")
+}

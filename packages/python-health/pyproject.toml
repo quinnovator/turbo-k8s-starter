@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "python-health"
+version = "0.1.0"
+description = "Health check handler for FastAPI"
+authors = ["Jack Quinn <jack@jq.codes>"]
+license = "MIT"
+packages = [{include = "python_health"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.8"
+psutil = "^7.0.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.3.4"
+pytest-asyncio = "^0.25.3"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

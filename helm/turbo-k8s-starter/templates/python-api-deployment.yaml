@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "turbo-k8s-starter.fullname" . }}-python-api
+  labels:
+    {{- include "turbo-k8s-starter.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.pythonApi.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "turbo-k8s-starter.selectorLabels" . | nindent 6 }}
+      app: python-api
+  template:
+    metadata:
+      labels:
+        {{- include "turbo-k8s-starter.labels" . | nindent 8 }}
+        app: python-api
+    spec:
+      {{- with .Values.pythonApi.imagePullSecrets | default .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: python-api
+          image: "{{ .Values.pythonApi.image.repository }}:{{ .Values.pythonApi.image.tag }}"
+          imagePullPolicy: {{ .Values.pythonApi.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.pythonApi.service.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.pythonApi.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.pythonApi.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.pythonApi.resources | nindent 12 }} 

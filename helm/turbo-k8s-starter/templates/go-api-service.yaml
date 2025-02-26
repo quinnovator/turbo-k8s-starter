@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "turbo-k8s-starter.fullname" . }}-go-api
+  labels:
+    {{- include "turbo-k8s-starter.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.goApi.service.type }}
+  ports:
+    - port: {{ .Values.goApi.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "turbo-k8s-starter.selectorLabels" . | nindent 4 }}
+    app: go-api

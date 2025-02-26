@@ -1,0 +1,56 @@
+# Builder stage
+FROM golang:1.22.3-alpine3.19 AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+
+# Setup working directory that matches relative path in go.mod
+WORKDIR /workspace/apps/{{kebabCase name}}
+
+# Copy go.mod and go.sum for dependency caching
+COPY apps/{{kebabCase name}}/go.mod ./go.mod
+COPY apps/{{kebabCase name}}/go.sum ./go.sum
+
+# Create directory structure for the replace directive
+RUN mkdir -p ../../packages/go-health
+
+# Copy the local go-health package with correct relative path
+COPY packages/go-health/ /workspace/packages/go-health/
+
+# Download dependencies with cache mounting
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download
+
+# Copy the source code
+COPY apps/{{kebabCase name}}/main.go ./
+
+# Build the binary for the target platform with optimizations
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -ldflags="-s -w" -o {{kebabCase name}}
+
+# Release stage
+FROM alpine:3.19.1
+
+# Add CA certificates for HTTPS
+RUN apk --no-cache add ca-certificates tzdata
+
+# Create a non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy the binary from the builder stage
+COPY --from=builder /workspace/apps/{{kebabCase name}}/{{kebabCase name}} /{{kebabCase name}}
+
+# Set the user to non-root
+USER appuser
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:{{port}}/health || exit 1
+
+# Expose port as used in main.go
+EXPOSE {{port}}
+
+# Run the binary
+ENTRYPOINT ["/{{kebabCase name}}"] 

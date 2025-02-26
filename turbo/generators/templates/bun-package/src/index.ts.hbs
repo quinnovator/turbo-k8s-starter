@@ -1,0 +1,12 @@
+import { Hono } from "hono";
+
+const {{camelCase name}} = new Hono();
+
+{{camelCase name}}.get("/", (c) => {
+  return c.json({
+    status: "OK",
+    message: "Hello from the {{kebabCase name}} package!"
+  });
+});
+
+export default {{camelCase name}};

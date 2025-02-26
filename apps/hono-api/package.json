@@ -1,0 +1,18 @@
+{
+	"name": "hono-api",
+	"private": true,
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"test": "bun test",
+		"perf-test": "bun run dev & sleep 2 && bun run perf-test:k6",
+		"perf-test:k6": "k6 run --out json=performance-tests/report/results.json performance-tests/loadtest.js",
+		"docker:build": "docker build -t hono-api -f ./Dockerfile ../../"
+	},
+	"dependencies": {
+		"hono": "^4.7.2",
+		"@repo/hono-health": "*"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.3"
+	}
+}
