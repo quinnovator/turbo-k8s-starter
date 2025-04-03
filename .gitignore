@@ -43,3 +43,6 @@ yarn-error.log*
 
 # Performance tests
 **/performance-tests/report/results.json
+
+helm/**/charts/**
+helm/**/charts

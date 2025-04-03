@@ -1,0 +1,35 @@
+# Python API Helm Chart
+
+This Helm chart deploys the Python API service. It's designed to be used as a subchart within the `turbo-k8s-starter` umbrella chart.
+
+## Configuration Parameters
+
+| Parameter                                     | Description                                                                 | Default                   |
+| :-------------------------------------------- | :-------------------------------------------------------------------------- | :------------------------ |
+| `replicaCount`                                | Initial number of replicas                                                  | `1`                       |
+| `image.repository`                            | Container image repository (overridden by umbrella/CI)                      | `python-api`              |
+| `image.tag`                                   | Container image tag (overridden by umbrella/CI)                             | `Chart.AppVersion`        |
+| `image.pullPolicy`                            | Image pull policy                                                           | `IfNotPresent`            |
+| `imagePullSecrets`                            | Secrets for pulling images from private repositories                        | `[]`                      |
+| `podLabels`                                   | Additional labels for Pods                                                  | `{}`                      |
+| `annotations`                                 | Additional annotations for Deployment                                       | `{}`                      |
+| `service.type`                                | Kubernetes Service type                                                     | `ClusterIP`               |
+| `service.port`                                | Kubernetes Service port                                                     | `8082`                    |
+| `service.portName`                            | Name for the service port                                                   | `http`                    |
+| `autoscaling.enabled`                         | Enable HorizontalPodAutoscaler                                              | `false`                   |
+| `autoscaling.minReplicas`                     | Minimum HPA replicas                                                        | `1`                       |
+| `autoscaling.maxReplicas`                     | Maximum HPA replicas                                                        | `10`                      |
+| `autoscaling.targetCPUUtilizationPercentage`  | Target CPU utilization for HPA                                              | `80`                      |
+| `autoscaling.targetMemoryUtilizationPercentage` | Target Memory utilization for HPA (optional)                              | `nil`                     |
+| `resources`                                   | Pod resource requests and limits                                            | `{}`                      |
+| `livenessProbe`                               | Liveness probe configuration                                                | `{httpGet: {path: /health, port: http}, initialDelaySeconds: 5, periodSeconds: 10}` |
+| `readinessProbe`                              | Readiness probe configuration                                               | `{httpGet: {path: /health, port: http}, initialDelaySeconds: 5, periodSeconds: 10}` |
+| `serviceAccount.create`                       | Create a ServiceAccount                                                     | `true`                    |
+| `serviceAccount.automount`                    | Automount ServiceAccount token                                              | `true`                    |
+| `serviceAccount.annotations`                  | Additional annotations for ServiceAccount                                   | `{}`                      |
+| `serviceAccount.name`                         | Name of the ServiceAccount (defaults to fullname)                           | `""`                      |
+| `podSecurityContext`                          | Security context for the pod                                                | `{}`                      |
+| `securityContext`                             | Security context for the container                                          | `{}`                      |
+| `nodeSelector`                                | Node selector for pod assignment                                            | `{}`                      |
+| `tolerations`                                 | Tolerations for pod assignment                                              | `[]`                      |
+| `affinity`                                    | Affinity for pod assignment                                                 | `{}`                      |

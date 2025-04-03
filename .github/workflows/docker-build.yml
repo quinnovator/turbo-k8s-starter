@@ -1,0 +1,220 @@
+name: Build and Release Docker Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      # Only trigger on app changes or workflow changes for the starter
+      - '.github/workflows/docker-build.yml'
+
+  workflow_dispatch:
+
+permissions:
+  contents: write # Needed for creating tags/releases
+  packages: write # Needed for publishing packages to GHCR
+
+jobs:
+  discover-services:
+    name: Discover Services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.set-services.outputs.services }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Need at least 2 commits to detect changes
+
+      - name: Find services with Dockerfiles and changes
+        id: set-services
+        run: |
+          # Determine if this is a manual trigger
+          IS_MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
+
+          # Get list of changed files (compare with previous commit)
+          if [[ "$IS_MANUAL" == "true" ]]; then
+            echo "Manual workflow run - will build all services with Dockerfiles"
+            CHANGED_FILES=$(find . -type f) # Consider all files as changed for manual runs
+          else
+            echo "Detecting changed files since previous commit"
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          fi
+
+          # For debugging
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Function to check if a service has changes
+          function has_changes() {
+            local service=$1
+            local directory=$2
+            # Check for changes in the specific app directory, shared packages, or the workflow file itself
+            echo "$CHANGED_FILES" | grep -q "^$directory/$service/" || \
+            echo "$CHANGED_FILES" | grep -q "^packages/" || \
+            echo "$CHANGED_FILES" | grep -q "^.github/workflows/"
+          }
+
+          # Find all services in 'apps' with Dockerfiles
+          APPS_WITH_DOCKERFILE=$(find apps -maxdepth 2 -name "Dockerfile" -type f | sed 's|apps/\([^/]*\)/Dockerfile|\1|')
+
+          # Filter services with changes
+          APPS_SERVICES="[]"
+          for APP in $APPS_WITH_DOCKERFILE; do
+            if [[ "$IS_MANUAL" == "true" ]] || has_changes "$APP" "apps"; then
+              APP_JSON=$(echo "$APP" | jq -R '{"name": ., "directory": "apps"}')
+              APPS_SERVICES=$(echo "$APPS_SERVICES" | jq ". + [$APP_JSON]")
+              echo "App $APP has changes and will be built"
+            else
+              echo "App $APP has no changes and will be skipped"
+            fi
+          done
+
+          # Output the services to build
+          echo "services<<EOF" >> $GITHUB_OUTPUT
+          echo "$APPS_SERVICES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "Services to build: $APPS_SERVICES"
+
+  version:
+    name: Generate Version
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.set-version.outputs.new_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for version calculation
+
+      - name: Get current version from Git tags
+        id: get-version
+        run: |
+          # Find the latest tag matching v*.*.*, default to 0.0.0 if none exist
+          if git tag -l | grep -q "^v"; then
+            LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
+            CURRENT_VERSION=${LATEST_TAG#v}
+            echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "Current version: $CURRENT_VERSION"
+          else
+            echo "current_version=0.0.0" >> $GITHUB_OUTPUT
+            echo "No version tags found, defaulting to 0.0.0"
+          fi
+
+      - name: Increment patch version
+        id: set-version
+        run: |
+          CURRENT_VERSION=${{ steps.get-version.outputs.current_version }}
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+
+          MAJOR=${VERSION_PARTS[0]:-0}
+          MINOR=${VERSION_PARTS[1]:-0}
+          PATCH=${VERSION_PARTS[2]:-0}
+
+          # Increment patch version number
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Create and push new Git tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "v${{ steps.set-version.outputs.new_version }}" -m "Release v${{ steps.set-version.outputs.new_version }}"
+          git push origin "v${{ steps.set-version.outputs.new_version }}"
+
+  build-docker-images:
+    name: Build Docker Images
+    needs: [version, discover-services]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Build one image per discovered service
+        service: ${{ fromJson(needs.discover-services.outputs.services) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU for multi-platform builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare repository name (lowercase)
+        id: repo-name
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "lowercased=$REPO_NAME" >> $GITHUB_OUTPUT
+
+      - name: Build and push multi-platform image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          # Dynamically set the Dockerfile path based on matrix service info
+          file: ./${{ matrix.service.directory }}/${{ matrix.service.name }}/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64/v8
+          tags: |
+            ghcr.io/${{ steps.repo-name.outputs.lowercased }}/${{ matrix.service.name }}:${{ needs.version.outputs.new_version }}
+            ghcr.io/${{ steps.repo-name.outputs.lowercased }}/${{ matrix.service.name }}:latest
+          # Enable build cache for faster builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  create-release:
+    name: Create GitHub Release
+    needs: [version, build-docker-images, discover-services]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare repository name (lowercase)
+        id: repo-name
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "lowercased=$REPO_NAME" >> $GITHUB_OUTPUT
+
+      - name: Generate image list for release notes
+        id: image-list
+        run: |
+          # Read services JSON from previous job output
+          echo '${{ needs.discover-services.outputs.services }}' > services.json
+          VERSION=${{ needs.version.outputs.new_version }}
+          REPO=${{ steps.repo-name.outputs.lowercased }}
+
+          IMAGE_LIST=""
+          # Loop through service names and create markdown list items
+          while read -r SERVICE_NAME; do
+            IMAGE_LIST="${IMAGE_LIST}- ghcr.io/${REPO}/${SERVICE_NAME}:${VERSION}\n"
+          done < <(jq -r '.[].name' services.json)
+
+          # Store the list with escaped newlines for use in the release body
+          echo "images<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$IMAGE_LIST" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release with generated notes
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ needs.version.outputs.new_version }}
+          tag_name: v${{ needs.version.outputs.new_version }}
+          generate_release_notes: true # Auto-generate release notes from commits
+          body: |
+            # Release v${{ needs.version.outputs.new_version }}
+
+            Docker images built and published:
+            ${{ steps.image-list.outputs.images }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

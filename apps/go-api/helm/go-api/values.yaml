@@ -1,0 +1,72 @@
+# Default values for go-api subchart.
+replicaCount: 1
+
+image:
+  repository: go-api # This will be overridden by Skaffold/CI/Umbrella
+  pullPolicy: IfNotPresent
+  # tag is intentionally omitted here. It should be supplied by Skaffold, CI/CD, or umbrella chart.
+  # tag: ""
+
+# Secrets for pulling images from private repositories.
+# These secrets are attached to the ServiceAccount (if serviceAccount.create is true).
+imagePullSecrets: []
+# Example:
+# imagePullSecrets:
+#   - name: my-docker-registry-secret
+
+# Optional labels to add to pods.
+podLabels: {}
+# Example:
+# podLabels:
+#   tier: backend
+
+# Optional annotations to add to the Deployment resource.
+annotations: {}
+# Example:
+# annotations:
+#   prometheus.io/scrape: "true"
+#   prometheus.io/port: "8080"
+
+service:
+  type: ClusterIP
+  port: 8080
+  portName: http
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # Optional memory target:
+  targetMemoryUtilizationPercentage: null
+
+# Pod resource requests and limits.
+resources: {}
+  # Example:
+  # limits:
+  #   cpu: 200m
+  #   memory: 256Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  # Name defaults to '<release>-<chart>' via helper if not set.
+  name: ""

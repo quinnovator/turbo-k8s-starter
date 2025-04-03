@@ -1,0 +1,45 @@
+# Default values for python-api subchart.
+replicaCount: 1
+
+image:
+  repository: python-api
+  pullPolicy: IfNotPresent
+  # tag: ""
+
+imagePullSecrets: []
+podLabels: {}
+annotations: {}
+
+service:
+  type: ClusterIP
+  port: 8082
+  portName: http
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: null
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""

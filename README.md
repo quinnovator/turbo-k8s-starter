@@ -1,8 +1,6 @@
 # Turborepo Starter for Bun, Go, and Python Microservices on K8s
 
-This template is, in my opinion (although I haven't checked), probably the best developer experience for a performant cloud-native application available.
-
-It includes examples for three types of services with private packages included.
+This repo includes examples for three types of services with private packages included.
 
 These include:
 

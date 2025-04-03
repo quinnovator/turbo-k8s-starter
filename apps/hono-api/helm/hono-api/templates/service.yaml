@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hono-api.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hono-api.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: {{ .Values.service.portName }}
+  selector:
+    {{- include "hono-api.selectorLabels" . | nindent 4 }}
